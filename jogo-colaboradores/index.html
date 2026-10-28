@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seja um colaborador</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F1EEFA;--ink:#3A3752;--mut:#8A86A3;--lav:#D9D2F2;--mint:#C6EBDA;--peach:#FFD6C2;--sky:#E6F0FB;--btn:#06b6d4}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:'Nunito','Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;padding:18px 14px}
+main{width:100%;max-width:420px}
+h1{font-size:24px;margin:4px 0 14px;text-align:center}
+.abas{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;margin-bottom:14px}
+.abas button{height:54px;border:0;border-radius:18px;font:800 17px inherit;font-family:inherit;color:var(--ink);background:var(--lav);cursor:pointer}
+.abas button#aba-rank{background:var(--peach)}
+.abas button.on{outline:3px solid var(--ink)}
+.painel{display:none}.painel.on{display:block}
+.cena{position:relative;border-radius:22px;overflow:hidden;background:var(--sky)}
+canvas{display:block;width:100%;height:auto;touch-action:manipulation}
+#dica{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;pointer-events:none}
+.card{background:#fff;border-radius:22px;padding:18px;margin-top:12px;text-align:center}
+.card input{width:100%;height:48px;border:2px solid var(--lav);border-radius:14px;padding:0 14px;font:700 17px inherit;font-family:inherit;margin:10px 0;text-align:center}
+.card button{height:48px;width:100%;border:0;border-radius:14px;background:var(--mint);font:800 17px inherit;font-family:inherit;color:var(--ink);cursor:pointer}
+ol{list-style:none;margin:0;padding:0}
+li{display:flex;gap:10px;align-items:center;padding:12px 14px;margin-bottom:8px;background:#fff;border-radius:16px;font-weight:800}
+li b{width:28px;color:var(--mut)}li span{margin-left:auto}li.eu{background:var(--mint)}
+li:nth-child(-n+3) b{color:#E59A6F}
+.vazio{text-align:center;color:var(--mut);font-weight:600}
+#entrada{position:fixed;inset:0;z-index:10;background:rgba(30,28,50,.6);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .5s}
+#entrada.sai{opacity:0;pointer-events:none}
+#entrada img{width:150px;height:150px;object-fit:contain}
+#btn-colab{height:60px;padding:0 34px;border:0;border-radius:30px;background:var(--btn);color:#fff;font:800 20px inherit;font-family:inherit;cursor:pointer;box-shadow:0 6px 20px rgba(6,182,212,.45)}
+</style>
+</head>
+<body>
+<div id="entrada">
+  <img id="logo" src="mascote_fechado.png" alt="Mascote da lixeira">
+  <button id="btn-colab">Ser colaborador</button>
+</div>
+
+<main>
+  <h1>Colaboradores da lixeira</h1>
+  <nav class="abas">
+    <button id="aba-jogo" class="on">Jogo</button>
+    <button id="aba-rank">Colaboradores</button>
+  </nav>
+
+  <section id="painel-jogo" class="painel on">
+    <div class="cena" id="cena">
+      <canvas id="cv"></canvas>
+      <div id="dica">Toque para começar</div>
+    </div>
+    <p class="vazio">Toque na tela para pular. Desvie das pessoas e pegue o lixo.</p>
+    <div id="fim" class="card" hidden>
+      <div id="fim-txt"></div>
+      <input id="nome" maxlength="12" placeholder="Seu apelido" autocomplete="off">
+      <button id="salvar">Salvar pontuação</button>
+      <div id="erro" class="vazio"></div>
+    </div>
+    <div id="jogado" class="card" hidden></div>
+  </section>
+
+  <section id="painel-rank" class="painel">
+    <ol id="lista"></ol>
+    <div id="meu" class="card" hidden></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const API = '/api/ranking';
+let colab = null;
+try { colab = JSON.parse(localStorage.getItem('colab') || 'null'); } catch (e) {}
+function guardar() { try { localStorage.setItem('colab', JSON.stringify(colab)); } catch (e) {} }
+
+/* ---------- abas ---------- */
+function aba(n) {
+  $('painel-jogo').classList.toggle('on', n === 'jogo');
+  $('painel-rank').classList.toggle('on', n === 'rank');
+  $('aba-jogo').classList.toggle('on', n === 'jogo');
+  $('aba-rank').classList.toggle('on', n === 'rank');
+  if (n === 'rank') carregarRanking();
+}
+$('aba-jogo').onclick = () => aba('jogo');
+$('aba-rank').onclick = () => aba('rank');
+$('btn-colab').onclick = () => {
+  $('entrada').classList.add('sai');
+  aba(colab && colab.nome ? 'rank' : 'jogo');
+};
+
+/* ---------- ranking ---------- */
+async function carregarRanking() {
+  const ol = $('lista');
+  try {
+    const r = await (await fetch(API)).json();
+    ol.innerHTML = '';
+    if (!r.top.length) ol.innerHTML = '<p class="vazio">Ninguém jogou ainda. Seja o primeiro!</p>';
+    r.top.forEach((j, i) => {
+      const li = document.createElement('li');
+      if (colab && colab.nome === j.nome && colab.pontos === j.pontos) li.className = 'eu';
+      const b = document.createElement('b'); b.textContent = i + 1;
+      const n = document.createElement('div'); n.textContent = j.nome;
+      const s = document.createElement('span'); s.textContent = j.pontos + ' lixos';
+      li.append(b, n, s); ol.append(li);
+    });
+  } catch (e) { ol.innerHTML = '<p class="vazio">Não foi possível carregar o ranking.</p>'; }
+  const m = $('meu');
+  if (colab && colab.nome) { m.hidden = false; m.textContent = 'Sua pontuação: ' + colab.pontos + ' lixos'; }
+}
+
+/* ---------- estado do jogador ---------- */
+function atualizarJogo() {
+  const jogou = !!colab;
+  $('cena').hidden = jogou;
+  $('fim').hidden = !(colab && !colab.nome);
+  $('jogado').hidden = !(colab && colab.nome);
+  if (colab && !colab.nome) $('fim-txt').textContent = 'Fim de jogo! Você coletou ' + colab.pontos + ' lixos.';
+  if (colab && colab.nome) $('jogado').textContent = 'Você já jogou. Sua pontuação: ' + colab.pontos + ' lixos.';
+}
+$('salvar').onclick = async () => {
+  const nome = $('nome').value.trim();
+  if (!nome) { $('erro').textContent = 'Escreva um apelido.'; return; }
+  $('salvar').disabled = true;
+  try {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: colab.id, nome, pontos: colab.pontos }) });
+    if (!r.ok && r.status !== 409) throw 0;
+    colab.nome = nome; guardar(); atualizarJogo(); aba('rank');
+  } catch (e) { $('erro').textContent = 'Não deu para salvar. Tente de novo.'; }
+  $('salvar').disabled = false;
+};
+
+/* ---------- jogo ---------- */
+const cv = $('cv'), cx = cv.getContext('2d');
+const W = 360, H = 200, G = 160;
+cv.width = W * 2; cv.height = H * 2; cx.scale(2, 2);
+const img = new Image(); img.src = 'mascote_fechado.png';
+const cores = ['#B7A6E8', '#F2A9A0', '#8FC7B0', '#F0C987'];
+let est = 'parado', p, obs, lix, vel, pts, prox, off = 0, last = 0;
+
+function reset() { p = { y: G - 44, vy: 0, no: true }; obs = []; lix = []; vel = 3.4; pts = 0; prox = 80; }
+function pular() {
+  if (colab || !$('painel-jogo').classList.contains('on')) return;
+  if (est === 'parado') iniciar();
+  if (est === 'jogando' && p.no) { p.vy = -9.2; p.no = false; }
+}
+function iniciar() { reset(); est = 'jogando'; $('dica').style.display = 'none'; last = performance.now(); requestAnimationFrame(loop); }
+
+function loop(n) {
+  const dt = Math.min(2, (n - last) / 16.67); last = n;
+  vel = Math.min(8, 3.4 + pts * 0.15);
+  p.vy += 0.55 * dt; p.y += p.vy * dt;
+  if (p.y >= G - 44) { p.y = G - 44; p.vy = 0; p.no = true; }
+  prox -= vel * dt;
+  if (prox <= 0) {
+    const h = 40 + Math.floor(Math.random() * 14);
+    obs.push({ x: W + 10, h, c: cores[Math.floor(Math.random() * cores.length)] });
+    const gap = 150 + Math.random() * 110;
+    lix.push({ x: W + 10 + gap / 2, y: G - 20 - Math.random() * 70, t: Math.floor(Math.random() * 3) });
+    prox = gap;
+  }
+  obs.forEach(o => o.x -= vel * dt); lix.forEach(l => l.x -= vel * dt);
+  obs = obs.filter(o => o.x > -30); lix = lix.filter(l => l.x > -20);
+  off = (off + vel * dt) % 24;
+  const px = 46, pw = 30, py = p.y + 6, ph = 34;
+  for (const o of obs) {
+    if (px + pw > o.x + 3 && px < o.x + 19 && py + ph > G - o.h + 6) return fim();
+  }
+  lix = lix.filter(l => {
+    const pego = px + pw > l.x - 9 && px < l.x + 9 && py + ph > l.y - 9 && py < l.y + 9;
+    if (pego) pts++;
+    return !pego;
+  });
+  desenhar();
+  requestAnimationFrame(loop);
+}
+
+function fim() {
+  est = 'fim'; desenhar();
+  const id = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+  colab = { id, pontos: pts, nome: null }; guardar(); atualizarJogo();
+}
+
+function desenhar() {
+  cx.fillStyle = '#E6F0FB'; cx.fillRect(0, 0, W, H);
+  cx.fillStyle = '#CDE8DA'; cx.fillRect(0, G, W, H - G);
+  cx.fillStyle = '#B5D8C5';
+  for (let x = -off; x < W; x += 24) cx.fillRect(x, G + 14, 10, 3);
+  for (const l of lix) {
+    cx.fillStyle = ['#9AA0B8', '#7FB7D6', '#F0D060'][l.t];
+    cx.beginPath();
+    if (l.t === 1) cx.roundRect(l.x - 6, l.y - 8, 12, 16, 3); else cx.arc(l.x, l.y, 8, 0, 7);
+    cx.fill();
+  }
+  for (const o of obs) {
+    const y = G - o.h;
+    cx.fillStyle = o.c; cx.beginPath(); cx.roundRect(o.x, y + 12, 22, o.h - 22, 6); cx.fill();
+    cx.fillStyle = '#F3C9A8'; cx.beginPath(); cx.arc(o.x + 11, y + 7, 7, 0, 7); cx.fill();
+    cx.fillStyle = '#5B5875'; cx.fillRect(o.x + 3, G - 10, 6, 10); cx.fillRect(o.x + 13, G - 10, 6, 10);
+  }
+  if (img.complete && img.naturalWidth) cx.drawImage(img, 40, p.y, 44, 44);
+  else { cx.fillStyle = '#06b6d4'; cx.beginPath(); cx.roundRect(46, p.y + 4, 32, 40, 6); cx.fill(); }
+  cx.fillStyle = '#3A3752'; cx.font = '800 16px Nunito, sans-serif'; cx.fillText('Lixos: ' + pts, 12, 24);
+}
+
+cv.addEventListener('pointerdown', pular);
+addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); pular(); } });
+reset(); desenhar(); atualizarJogo();
+if (colab) $('dica').style.display = 'none';
+</script>
+</body>
+</html>
