@@ -102,8 +102,8 @@ li:nth-child(-n+3) b{color:#E59A6F}
 const $ = id => document.getElementById(id);
 const API = '/api/ranking';
 let colab = null;
-try { colab = JSON.parse(localStorage.getItem('colab') || 'null'); } catch (e) {}
-function guardar() { try { localStorage.setItem('colab', JSON.stringify(colab)); } catch (e) {} }
+try { colab = JSON.parse(localStorage.getItem('colab2') || 'null'); } catch (e) {}
+function guardar() { try { localStorage.setItem('colab2', JSON.stringify(colab)); } catch (e) {} }
 
 /* ---------- abas ---------- */
 function aba(n) {
