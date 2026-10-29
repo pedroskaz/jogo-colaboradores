@@ -35,6 +35,7 @@ li:nth-child(-n+3) b{color:#E59A6F}
 @keyframes salta{50%{transform:translateY(-12px)}}
 #fim{position:fixed;inset:0;z-index:5;background:rgba(40,36,70,.88);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;animation:pop .35s ease-out}
 #fim[hidden]{display:none}
+#triste{width:96px;height:98px}
 #fim h2{margin:0;font-size:34px}
 #fim p{margin:0 0 6px;font-size:19px}
 #fim b{font-size:30px;color:var(--mint)}
@@ -65,6 +66,7 @@ li:nth-child(-n+3) b{color:#E59A6F}
     </div>
     <p class="vazio">Toque na tela para pular. Desvie das pessoas e pegue o lixo.</p>
     <div id="fim" hidden>
+      <canvas id="triste" width="96" height="98"></canvas>
       <h2>Fim de jogo!</h2>
       <p>Você coletou <b id="fim-pts">0</b> lixos</p>
       <input id="nome" maxlength="12" placeholder="Digite seu apelido" autocomplete="off">
@@ -148,7 +150,33 @@ $('salvar').onclick = async () => {
 const cv = $('cv'), cx = cv.getContext('2d');
 const W = 360, H = 200, G = 160;
 cv.width = W * 2; cv.height = H * 2; cx.scale(2, 2);
-let anim = 0;
+let anim = 0, ac;
+function audio() {
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) {}
+  return ac;
+}
+function somComer() {
+  const a = audio(); if (!a) return;
+  try {
+    const t = a.currentTime;
+    [[0, 420, 150], [0.11, 520, 170]].forEach(([d, f1, f2]) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f1, t + d); o.frequency.exponentialRampToValueAtTime(f2, t + d + 0.09);
+      g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.3, t + d + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.1);
+      o.connect(g).connect(a.destination); o.start(t + d); o.stop(t + d + 0.11);
+    });
+    const buf = a.createBuffer(1, Math.floor(a.sampleRate * 0.2), a.sampleRate), dd = buf.getChannelData(0);
+    for (let i = 0; i < dd.length; i++) dd[i] = (Math.random() * 2 - 1) * (1 - i / dd.length);
+    const sr = a.createBufferSource(), fl = a.createBiquadFilter(), gn = a.createGain();
+    sr.buffer = buf; fl.type = 'bandpass'; fl.frequency.value = 1800; gn.gain.value = 0.25;
+    sr.connect(fl).connect(gn).connect(a.destination); sr.start(t);
+    const o2 = a.createOscillator(), g2 = a.createGain();
+    o2.type = 'sine'; o2.frequency.setValueAtTime(180, t + 0.24); o2.frequency.exponentialRampToValueAtTime(420, t + 0.34);
+    g2.gain.setValueAtTime(0.0001, t + 0.24); g2.gain.exponentialRampToValueAtTime(0.3, t + 0.26); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+    o2.connect(g2).connect(a.destination); o2.start(t + 0.24); o2.stop(t + 0.37);
+  } catch (e) {}
+}
 function mascote(c, x, y, s, a, est) {
   c.save(); c.translate(x, y); c.scale(s, s); c.lineCap = 'round';
   const az = '#3b5a9a', az2 = '#2c4378', ci = '#3fd0e0', k = Math.sin(a);
@@ -160,6 +188,7 @@ function mascote(c, x, y, s, a, est) {
   c.strokeStyle = az; c.lineWidth = 2.5; c.beginPath();
   if (est === 'pula') { c.moveTo(10, 20); c.lineTo(3, 10); c.moveTo(34, 20); c.lineTo(41, 10); }
   else if (est === 'corre') { c.moveTo(10, 20); c.lineTo(4, 26 + k * 5); c.moveTo(34, 20); c.lineTo(40, 26 - k * 5); }
+  else if (est === 'triste') { c.moveTo(10, 22); c.lineTo(5, 34); c.moveTo(34, 22); c.lineTo(39, 34); }
   else { c.moveTo(10, 20); c.lineTo(3, 10 + k * 3); c.moveTo(34, 22); c.lineTo(41, 40); }
   c.stroke();
   c.fillStyle = az; c.beginPath(); c.roundRect(10, 10, 24, 26, 3); c.fill();
@@ -169,7 +198,11 @@ function mascote(c, x, y, s, a, est) {
   c.beginPath(); c.arc(25.5, 19.5, 2.6, 0, 7); c.fill();
   c.fillStyle = '#1f2a44'; c.beginPath(); c.arc(18.5, 19.8, 1.1, 0, 7); c.fill();
   c.beginPath(); c.arc(25.5, 19.8, 1.1, 0, 7); c.fill();
-  c.strokeStyle = ci; c.lineWidth = 1.6; c.beginPath(); c.arc(22, 28, 4, 0.2 * Math.PI, 0.8 * Math.PI); c.stroke();
+  c.strokeStyle = ci; c.lineWidth = 1.6; c.beginPath();
+  if (est === 'triste') {
+    c.arc(22, 32, 4, 1.2 * Math.PI, 1.8 * Math.PI); c.stroke();
+    c.fillStyle = ci; c.beginPath(); c.arc(17.5, 27, 1.4, 0, 7); c.fill();
+  } else { c.arc(22, 28, 4, 0.2 * Math.PI, 0.8 * Math.PI); c.stroke(); }
   c.fillStyle = '#ef5b3b'; c.beginPath(); c.moveTo(10, 10); c.lineTo(12, 1); c.lineTo(17, 8); c.lineTo(22, -1); c.lineTo(27, 8); c.lineTo(32, 1); c.lineTo(34, 10); c.closePath(); c.fill();
   c.restore();
 }
@@ -182,7 +215,7 @@ function pular() {
   if (est === 'parado') iniciar();
   if (est === 'jogando' && p.no) { p.vy = -9.2; p.no = false; }
 }
-function iniciar() { reset(); est = 'jogando'; $('dica').style.display = 'none'; last = performance.now(); requestAnimationFrame(loop); }
+function iniciar() { audio(); reset(); est = 'jogando'; $('dica').style.display = 'none'; last = performance.now(); requestAnimationFrame(loop); }
 
 function loop(n) {
   const dt = Math.min(2, (n - last) / 16.67); last = n;
@@ -208,7 +241,7 @@ function loop(n) {
   lix = lix.filter(l => {
     const r = 15 - 5 * d;
     const pego = px + pw > l.x - r && px < l.x + r && py + ph > l.y - r && py < l.y + r;
-    if (pego) pts++;
+    if (pego) { pts++; somComer(); }
     return !pego;
   });
   desenhar();
@@ -250,6 +283,7 @@ const pc = $('pose').getContext('2d'); let tp = 0;
   tp += 0.08; pc.clearRect(0, 0, 190, 200); mascote(pc, 20, 14, 3.4, tp, 'aponta');
   requestAnimationFrame(animaPose);
 })();
+mascote($('triste').getContext('2d'), 6, 5, 1.9, 0, 'triste');
 reset(); desenhar(); atualizarJogo();
 if (colab) $('dica').style.display = 'none';
 </script>
