@@ -44,6 +44,12 @@ li:nth-child(-n+3) b{color:#E59A6F}
 #erro{min-height:20px;color:#ffd6c2;font-weight:600}
 @keyframes pop{from{transform:scale(.88);opacity:0}}
 @keyframes brilha{50%{box-shadow:0 0 0 7px rgba(198,235,218,.55)}}
+.insta{display:flex;gap:12px;margin-top:22px;align-items:flex-end}
+.insta .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
+.insta small{font-size:12px;font-weight:700;color:var(--mut);line-height:1.25}
+.insta a{display:inline-block;padding:7px 20px;border-radius:999px;font-family:inherit;font-weight:800;font-size:14px;text-decoration:none}
+.insta .b{background:#FFE98A;color:#5A4600;border:2px solid #F2C94C}
+.insta .a{background:#4B2A7B;color:#EADCFF;border:2px solid #7A4BC2}
 </style>
 </head>
 <body>
@@ -79,6 +85,16 @@ li:nth-child(-n+3) b{color:#E59A6F}
   <section id="painel-rank" class="painel">
     <ol id="lista"></ol>
     <div id="meu" class="card" hidden></div>
+    <div class="insta">
+      <div class="col">
+        <small>↓ Siga nossa sala no insta! ↓</small>
+        <a class="b" href="https://www.instagram.com/chum.info1b?srtk=ZnIxbnI5Y3ZzN2xo" target="_blank" rel="noopener">Info 1 B</a>
+      </div>
+      <div class="col">
+        <small>↓ Siga o insta dos nossos colegas! ↓</small>
+        <a class="a" href="https://www.instagram.com/chum_info1a?exln=MWx2d2Z3ZjRhM2hyNw==" target="_blank" rel="noopener">Info 1 A</a>
+      </div>
+    </div>
   </section>
 </main>
 
